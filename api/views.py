@@ -6,10 +6,6 @@ class FuelOptimizerView(APIView):
     def get(self, request):
         start = request.query_params.get('start')
         finish = request.query_params.get('finish')
-        
-        if not start or not finish:
-            return Response({"error": "Missing start or finish location"}, status=400)
-            
         try:
             data = get_optimal_fuel_route(start, finish)
             return Response(data)

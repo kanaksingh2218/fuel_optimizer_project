@@ -5,36 +5,27 @@ from api.models import FuelStation
 from geopy.geocoders import Nominatim
 
 class Command(BaseCommand):
-    help = 'Imports fuel prices and geocodes city/state coordinates'
-
     def handle(self, *args, **options):
         df = pd.read_csv('fuel-prices-for-be-assessment.csv')
-        geolocator = Nominatim(user_agent="fuel_optimizer_v1")
+        geolocator = Nominatim(user_agent="fuel_v1")
         city_cache = {}
 
-        self.stdout.write("Starting import... (This geocodes locations for speed)")
-        
+        self.stdout.write("Geocoding cities... please wait.")
         for _, row in df.iterrows():
-            location_key = f"{row['City'].strip()}, {row['State'].strip()}, USA"
-            
-            if location_key not in city_cache:
+            loc_key = f"{row['City'].strip()}, {row['State'].strip()}, USA"
+            if loc_key not in city_cache:
                 try:
-                    loc = geolocator.geocode(location_key)
+                    loc = geolocator.geocode(loc_key)
                     if loc:
-                        city_cache[location_key] = (loc.latitude, loc.longitude)
-                        time.sleep(1) # Respect rate limits
-                except:
-                    continue
+                        city_cache[loc_key] = (loc.latitude, loc.longitude)
+                        time.sleep(1) # Rate limit
+                except: continue
             
-            coords = city_cache.get(location_key)
+            coords = city_cache.get(loc_key)
             if coords:
                 FuelStation.objects.create(
-                    name=row['Truckstop Name'],
-                    address=row['Address'],
-                    city=row['City'],
-                    state=row['State'],
-                    price=row['Retail Price'],
-                    latitude=coords[0],
-                    longitude=coords[1]
+                    name=row['Truckstop Name'], address=row['Address'],
+                    city=row['City'], state=row['State'],
+                    price=row['Retail Price'], latitude=coords[0], longitude=coords[1]
                 )
-        self.stdout.write(self.style.SUCCESS('Successfully imported fuel data'))
+        self.stdout.write("Import complete!")
